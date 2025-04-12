@@ -1,6 +1,7 @@
 cara pakai nya cukup simpel
 
 klo pake pc, download dulu python lalu install seperti biasa
+
 klo pake hp, download dulu aplikasi pydroid3 di playstore
 
 klo udh tinggal jalanin skrip softmain.py di terminal atau whatever
