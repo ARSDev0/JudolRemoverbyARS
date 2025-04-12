@@ -152,4 +152,4 @@ def process_spam_comments(csv_filename):
         print(Fore.RED + f"\n❌ Error: {str(e)}")
 
 if __name__ == "__main__":
-    process_spam_comments("comments_labeled.csv")1,2,3,4,5
+    process_spam_comments("comments_labeled.csv")
