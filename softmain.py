@@ -1,6 +1,24 @@
 import os
 import time
 import subprocess
+import importlib.util
+
+# Function to check if a package is installed
+def is_package_installed(package_name):
+    spec = importlib.util.find_spec(package_name)
+    return spec is not None
+
+# Install colorama if not already installed
+if not is_package_installed('colorama'):
+    print("⏳ Installing colorama package for the first time...")
+    try:
+        subprocess.check_call(["pip", "install", "colorama"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("✅ colorama installed successfully!")
+    except subprocess.CalledProcessError:
+        print("❌ Failed to install colorama. Some features might not work properly.")
+    time.sleep(1)
+
+# Now import colorama after ensuring it's installed
 from colorama import init, Fore, Back, Style
 
 # Initialize colorama
@@ -95,15 +113,23 @@ def install_requirements():
         "colorama"
     ]
     
+    # Check which requirements are already installed
+    to_install = [pkg for pkg in requirements if not is_package_installed(pkg.replace("-", "_"))]
+    
+    if not to_install:
+        print(Fore.GREEN + "\n✅ Semua requirements sudah terinstall!")
+        return_to_menu()
+        return
+    
     print(Fore.CYAN + "\n📦 Daftar package yang akan diinstall:")
-    for package in requirements:
+    for package in to_install:
         print(Fore.WHITE + f"  • {package}")
     
     print(Fore.YELLOW + "\n⏳ Sedang menginstall...")
     loading_animation()
     
     try:
-        for package in requirements:
+        for package in to_install:
             subprocess.check_call(["pip", "install", package])
         print(Fore.GREEN + "\n✅ Semua requirements berhasil diinstall!")
     except subprocess.CalledProcessError as e:
