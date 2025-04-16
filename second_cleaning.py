@@ -16,59 +16,48 @@ def print_header():
  ╚█████╔╝╚██████╔╝██████╔╝╚██████╔╝███████╗ ██║  ██║███████╗██║ ╚═╝ ██║╚██████╔╝ ╚████╔╝ ███████╗██║  ██║
   ╚════╝  ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝
     """ + Style.RESET_ALL)
-    print(Fore.YELLOW + " YouTube Spam Detector ".center(50, "="))
-    print(Fore.MAGENTA + "By ARS - Version 1.1".center(50) + "\n")
+    print(Fore.YELLOW + " YOUTUBE SPAM DETECTOR ".center(60, "="))
+    print(Fore.MAGENTA + "By ARS - Version 1.2".center(60) + "\n")
 
 def bersihkan_teks(teks):
-    """Hapus konten non-spam sebelum deteksi"""
     if not isinstance(teks, str):
         return ""
     
-    # Hapus mata uang (100rb, Rp 50.000) tetapi biarkan angka polos
     teks = re.sub(r'\b\d+\s*(?:rb|jt|juta|m|triliun)?\s*(?:rp|idr|usd)\b|\b(?:rp|idr|usd)\s*\d+\b', '', teks, flags=re.IGNORECASE)
-    
-    # Hapus format waktu (00:00, 12.30)
     teks = re.sub(r'\b\d{1,2}[:.]\d{2}\b', '', teks)
-    
-    # Hapus angka pangkat (orang², 10⁵)
     teks = re.sub(r'(\w)\²|\d+\⁺[\d⁺]*', '', teks)
-    
     return teks
 
 def is_font_aneh(word):
-    """Deteksi karakter non-ASCII khusus (kecuali pangkat)"""
+    """Deteksi karakter aneh termasuk mathematical alphanumerics"""
     for char in word:
-        if ord(char) > 127 and not unicodedata.category(char).startswith('P') and char not in ('²', '³'):
+        code_point = ord(char)
+        if (
+            code_point > 127 and
+            not unicodedata.category(char).startswith('P') and
+            char not in ('²', '³')
+        ):
+            return True
+        if 0x1D400 <= code_point <= 0x1D7FF:  # Mathematical Alphanumeric Symbols
             return True
     return False
 
 def is_kata_angka_repetitif(word):
-    """Deteksi pola seperti 'weton88'"""
-    match = re.fullmatch(r'^[a-zA-Z]+((\d)\2{1,2})$', word)
-    return bool(match)
+    return bool(re.fullmatch(r'^[a-zA-Z]+((\d)\2{1,2})$', word))
 
 def is_angka_kompleks(word):
-    """Deteksi pola seperti 'JPT0GEL77'"""
     numbers = re.findall(r'\d+', word)
-    return (len(numbers) >= 2 and 
-            len(numbers[-1]) in {2,3} and 
-            numbers[-1] == numbers[-1][0]*len(numbers[-1]))
+    return (len(numbers) >= 2 and len(numbers[-1]) in {2, 3} and numbers[-1] == numbers[-1][0]*len(numbers[-1]))
 
 def is_angka_repetitif_setelah_spasi(word):
-    """Deteksi angka dengan pola repetitif setelah spasi (contoh: '777', '123 456 789')"""
-    # Pola 1: Angka berulang minimal 3 digit (contoh: 777, 8888)
     if re.fullmatch(r'^\d{3,}$', word) and len(set(word)) == 1:
         return True
-    
-    # Pola 2: Grup angka berulang dipisahkan spasi (contoh: "123 123" atau "45 45 45")
     groups = word.split()
     if len(groups) >= 2 and all(g == groups[0] for g in groups):
         return True
-    
     return False
 
 def deteksi_spam(teks):
-    """Deteksi spam setelah pembersihan teks"""
     teks_bersih = bersihkan_teks(teks)
     kata_kata = re.findall(r'[^\s\.,!?\'"\-]+', teks_bersih)
     
@@ -86,75 +75,50 @@ def deteksi_spam(teks):
     return ("spam", [k[1] for k in spam_elements]) if spam_elements else ("ham", [])
 
 def show_progress(current, total, start_time):
-    """Menampilkan progress bar dan estimasi waktu"""
-    progress = current / total
     bar_length = 40
+    progress = current / total
     filled = int(bar_length * progress)
     bar = Fore.GREEN + '█' * filled + Fore.YELLOW + '░' * (bar_length - filled)
-    
     elapsed = time.time() - start_time
-    eta = (elapsed / current) * (total - current) if current > 0 else 0
-    
-    print(f"\r{bar} {Fore.CYAN}{current}/{total} komentar "
-          f"({progress:.1%}) | Waktu: {elapsed:.1f}s | ETA: {eta:.1f}s", end="")
+    eta = (elapsed / current * (total - current)) if current else 0
+    print(f"\r{bar} {Fore.CYAN}{current}/{total} ({progress:.1%}) | ETA: {eta:.1f}s", end='')
 
 def proses_file_csv(input_file, output_file):
-    """Proses file CSV dengan sistem terbaru dan mengurutkan hasil"""
     print_header()
-    
     try:
-        # Baca file input
-        print(Fore.YELLOW + f"\n📖 Membaca file input: {input_file}")
         with open(input_file, mode='r', encoding='utf-8') as f_in:
             reader = csv.DictReader(f_in)
             rows = list(reader)
             total_comments = len(rows)
-            print(Fore.CYAN + f"🔍 Ditemukan {total_comments} komentar untuk diproses")
-        
-        # Proses deteksi spam
-        print(Fore.YELLOW + "\n🛡️ Memulai deteksi spam...")
-        start_time = time.time()
-        
+            print(Fore.CYAN + f"\n🔍 {total_comments} komentar akan diproses...\n")
+
         data = []
         spam_count = 0
-        
+        start_time = time.time()
+
         for i, row in enumerate(rows, 1):
             show_progress(i, total_comments, start_time)
             comment_id = row.get('comment_id', '')
             teks = row.get('cleaned_comment', '')
             label, spam_detail = deteksi_spam(teks)
-            
             if label == 'spam':
                 spam_count += 1
-            
             data.append([comment_id, label, teks, '|'.join(spam_detail)])
-        
-        # Urutkan data: Spam lebih dulu, lalu Ham
+
         data.sort(key=lambda x: 0 if x[1] == 'spam' else 1)
-        
-        # Hitung statistik
-        ham_count = total_comments - spam_count
-        spam_percentage = (spam_count / total_comments * 100) if total_comments > 0 else 0
-        
-        # Tampilkan ringkasan
-        print(Fore.GREEN + "\n\n✅ Deteksi spam selesai!")
-        print(Fore.CYAN + f"\n📊 Ringkasan:")
-        print(Fore.WHITE + f"  • Total komentar: {total_comments}")
-        print(Fore.RED + f"  • Komentar spam: {spam_count} ({spam_percentage:.1f}%)")
-        print(Fore.GREEN + f"  • Komentar normal: {ham_count}")
-        
-        # Simpan hasil
+
         with open(output_file, mode='w', encoding='utf-8', newline='') as f_out:
             writer = csv.writer(f_out)
             writer.writerow(['comment_id', 'label', 'cleaned_comment', 'spam_detail'])
             writer.writerows(data)
-        
-        print(Fore.GREEN + f"\n💾 Hasil disimpan di: {output_file}")
-    
+
+        ham_count = total_comments - spam_count
+        print(Fore.GREEN + f"\n\n✅ Selesai! {spam_count} spam terdeteksi dari {total_comments} komentar.")
+
     except FileNotFoundError:
         print(Fore.RED + f"\n❌ File tidak ditemukan: {input_file}")
     except Exception as e:
         print(Fore.RED + f"\n❌ Error: {str(e)}")
 
 if __name__ == "__main__":
-    proses_file_csv('cleaned_comments.csv', 'comments_labeled.csv')
+    proses_file_csv("cleaned_comments.csv", "comments_labeled.csv")
