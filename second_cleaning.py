@@ -17,14 +17,14 @@ def print_header():
   ╚════╝  ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝
     """ + Style.RESET_ALL)
     print(Fore.YELLOW + " YouTube Spam Detector ".center(50, "="))
-    print(Fore.MAGENTA + "By ARS - Version 1.0".center(50) + "\n")
+    print(Fore.MAGENTA + "By ARS - Version 1.1".center(50) + "\n")
 
 def bersihkan_teks(teks):
     """Hapus konten non-spam sebelum deteksi"""
     if not isinstance(teks, str):
         return ""
     
-    # Hapus mata uang (100rb, Rp 50.000)
+    # Hapus mata uang (100rb, Rp 50.000) tetapi biarkan angka polos
     teks = re.sub(r'\b\d+\s*(?:rb|jt|juta|m|triliun)?\s*(?:rp|idr|usd)\b|\b(?:rp|idr|usd)\s*\d+\b', '', teks, flags=re.IGNORECASE)
     
     # Hapus format waktu (00:00, 12.30)
@@ -54,6 +54,19 @@ def is_angka_kompleks(word):
             len(numbers[-1]) in {2,3} and 
             numbers[-1] == numbers[-1][0]*len(numbers[-1]))
 
+def is_angka_repetitif_setelah_spasi(word):
+    """Deteksi angka dengan pola repetitif setelah spasi (contoh: '777', '123 456 789')"""
+    # Pola 1: Angka berulang minimal 3 digit (contoh: 777, 8888)
+    if re.fullmatch(r'^\d{3,}$', word) and len(set(word)) == 1:
+        return True
+    
+    # Pola 2: Grup angka berulang dipisahkan spasi (contoh: "123 123" atau "45 45 45")
+    groups = word.split()
+    if len(groups) >= 2 and all(g == groups[0] for g in groups):
+        return True
+    
+    return False
+
 def deteksi_spam(teks):
     """Deteksi spam setelah pembersihan teks"""
     teks_bersih = bersihkan_teks(teks)
@@ -67,6 +80,8 @@ def deteksi_spam(teks):
             spam_elements.append(('kata_angka_repetitif', kata))
         elif is_angka_kompleks(kata):
             spam_elements.append(('angka_kompleks', kata))
+        elif is_angka_repetitif_setelah_spasi(kata):
+            spam_elements.append(('angka_repetitif', kata))
     
     return ("spam", [k[1] for k in spam_elements]) if spam_elements else ("ham", [])
 
