@@ -1,9 +1,9 @@
 import pandas as pd
 import re
 import emoji
-from colorama import init, Fore, Style
 import time
 import unicodedata
+from colorama import init, Fore, Style
 
 # Inisialisasi colorama
 init(autoreset=True)
@@ -18,9 +18,8 @@ def print_header():
   ╚════╝  ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝
     """ + Style.RESET_ALL)
     print(Fore.YELLOW + " YouTube Comment Cleaner ".center(50, "="))
-    print(Fore.MAGENTA + "By ARS - Version 2.0".center(50) + "\n")
+    print(Fore.MAGENTA + "By ARS - Version 2.1".center(50) + "\n")
 
-# Deteksi karakter dari bahasa yang diblokir
 def is_language_blocked(char):
     try:
         name = unicodedata.name(char)
@@ -43,19 +42,25 @@ def contains_blocked_language(text):
         return True
     return any(is_language_blocked(char) for char in text)
 
-# Pembersih komentar
+def merge_spaced_characters(text):
+    """
+    Gabungkan huruf yang terpisah spasi (misalnya: '𝐀 𝐌 𝐁 𝐈 𝐋' → '𝐀𝐌𝐁𝐈𝐋')
+    """
+    pattern = re.compile(r'(?:\b\w\s){2,20}\w\b')
+    return pattern.sub(lambda match: match.group(0).replace(' ', ''), text)
+
 def clean_text(text):
     if not isinstance(text, str) or contains_blocked_language(text):
         return None
 
-    text = emoji.replace_emoji(text, replace='')  # Hapus emoji
-    text = re.sub(r'\s*@\S+', '', text)           # Hapus mention @xxx
-    text = re.sub(r'[^\w\s]', '', text)           # Hapus simbol khusus
-    text = re.sub(r'\s+', ' ', text).strip()      # Hapus spasi berlebihan
+    text = merge_spaced_characters(text)
+    text = emoji.replace_emoji(text, replace='')
+    text = re.sub(r'\s*@\S+', '', text)
+    text = re.sub(r'[^\w\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
 
     return text if text else None
 
-# Progres bar
 def show_progress(current, total, start_time):
     progress = current / total
     bar_length = 40
