@@ -1,0 +1,6 @@
+.qodo
+venv
+credentials
+__pycache__
+.csv
+results
