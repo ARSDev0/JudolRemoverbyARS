@@ -10,16 +10,20 @@ FILES_TO_DELETE = [
 def delete_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
-        print(f"🗑️  Berhasil menghapus: {file_path}")
+        print(f"Berhasil menghapus: {file_path}")
     else:
-        print(f"ℹ️  File tidak ditemukan (sudah dihapus?): {file_path}")
+        print(f"File tidak ditemukan (sudah dihapus?): {file_path}")
 
 def main():
-    print("🔁 Menghapus file konfigurasi autentikasi...\n")
+    print()
+    print("Menghapus file konfigurasi autentikasi...")
+    print()
     for filename in FILES_TO_DELETE:
         path = os.path.join(CREDENTIALS_DIR, filename)
         delete_file(path)
-    print("\n✅ Semua konfigurasi yang ditentukan telah diproses.")
+    print()
+    print("Semua konfigurasi yang ditentukan telah diproses.")
+    print()
 
 if __name__ == "__main__":
     main()

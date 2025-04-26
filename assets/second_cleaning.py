@@ -3,21 +3,13 @@ import unicodedata
 import csv
 from colorama import init, Fore, Style
 import time
+import os
+import json
+from judol_algoritm import GamblingAdDetector
 
 # Initialize colorama
 init(autoreset=True)
 
-def print_header():
-    print(Fore.YELLOW + r"""
-      ██╗██╗   ██╗██████╗  ██████╗ ██╗      ██████╗ ███████╗███╗   ███╗ ██████╗ ██╗   ██╗███████╗██████╗ 
-      ██║██║   ██║██╔══██╗██╔═══██╗██║      ██╔══██╗██╔════╝████╗ ████║██╔═══██╗██║   ██║██╔════╝██╔══██╗
-      ██║██║   ██║██║  ██║██║   ██║██║      ██████╔╝█████╗  ██╔████╔██║██║   ██║██║   ██║█████╗  ██████╔╝
- ██   ██║██║   ██║██║  ██║██║   ██║██║      ██╔══██╗██╔══╝  ██║╚██╔╝██║██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗
- ╚█████╔╝╚██████╔╝██████╔╝╚██████╔╝███████╗ ██║  ██║███████╗██║ ╚═╝ ██║╚██████╔╝ ╚████╔╝ ███████╗██║  ██║
-  ╚════╝  ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝
-    """ + Style.RESET_ALL)
-    print(Fore.YELLOW + " YOUTUBE SPAM DETECTOR ".center(60, "="))
-    print(Fore.MAGENTA + "By ARS - Version 1.2".center(60) + "\n")
 
 def bersihkan_teks(teks):
     if not isinstance(teks, str):
@@ -62,6 +54,16 @@ def deteksi_spam(teks):
     kata_kata = re.findall(r'[^\s\.,!?\'"\-]+', teks_bersih)
     
     spam_elements = []
+    # Use new gambling ad detector
+    deobf_teks = detector.deobfuscate_text(teks)
+    gambling_found = False
+    if detector.keyword_number_pattern.search(deobf_teks):
+        spam_elements.append(('gambling_ad', teks))
+        gambling_found = True
+    # Broaden gambling detection: suspicious name patterns
+    if detector.name_pattern.search(deobf_teks):
+        spam_elements.append(('gambling_ad', teks))
+        gambling_found = True
     for kata in kata_kata:
         if is_font_aneh(kata):
             spam_elements.append(('font_aneh', kata))
@@ -84,13 +86,23 @@ def show_progress(current, total, start_time):
     print(f"\r{bar} {Fore.CYAN}{current}/{total} ({progress:.1%}) | ETA: {eta:.1f}s", end='')
 
 def proses_file_csv(input_file, output_file):
-    print_header()
+    print()
+    output_dir = 'results'
+    output_file_path = os.path.join(output_dir, output_file)
+    input_file_path = os.path.join(output_dir, input_file)
     try:
-        with open(input_file, mode='r', encoding='utf-8') as f_in:
+        # Only print header if file exists
+        if not os.path.exists(input_file_path):
+            print(Fore.RED + f"File tidak ditemukan: {input_file_path}")
+            print()
+            return
+
+        with open(input_file_path, mode='r', encoding='utf-8') as f_in:
             reader = csv.DictReader(f_in)
             rows = list(reader)
             total_comments = len(rows)
-            print(Fore.CYAN + f"\n🔍 {total_comments} komentar akan diproses...\n")
+            print(Fore.CYAN + f"{total_comments} komentar akan diproses...")
+            print()
 
         data = []
         spam_count = 0
@@ -100,6 +112,12 @@ def proses_file_csv(input_file, output_file):
             show_progress(i, total_comments, start_time)
             comment_id = row.get('comment_id', '')
             teks = row.get('cleaned_comment', '')
+            # Prevent arrow key escape sequences in comment
+            if isinstance(teks, str) and (
+                teks in ["\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D", "^[[A", "^[[B", "^[[C", "^[[D"] or
+                "\x1b" in teks or teks.startswith("^[[")
+            ):
+                continue
             label, spam_detail = deteksi_spam(teks)
             if label == 'spam':
                 spam_count += 1
@@ -107,18 +125,43 @@ def proses_file_csv(input_file, output_file):
 
         data.sort(key=lambda x: 0 if x[1] == 'spam' else 1)
 
-        with open(output_file, mode='w', encoding='utf-8', newline='') as f_out:
+        # Ensure results directory exists
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        with open(output_file_path, mode='w', encoding='utf-8', newline='') as f_out:
             writer = csv.writer(f_out)
             writer.writerow(['comment_id', 'label', 'cleaned_comment', 'spam_detail'])
             writer.writerows(data)
 
         ham_count = total_comments - spam_count
-        print(Fore.GREEN + f"\n\n✅ Selesai! {spam_count} spam terdeteksi dari {total_comments} komentar.")
+        print()
+        print(Fore.GREEN + "="*60)
+        print(Fore.GREEN + f"Selesai! {spam_count} spam terdeteksi dari {total_comments} komentar.")
+        print(Fore.GREEN + f"Hasil disimpan di: {output_file_path}")
+        print(Fore.GREEN + "="*60)
+        print()
 
     except FileNotFoundError:
-        print(Fore.RED + f"\n❌ File tidak ditemukan: {input_file}")
+        print(Fore.RED + f"File tidak ditemukan: {input_file_path}")
+        print()
     except Exception as e:
-        print(Fore.RED + f"\n❌ Error: {str(e)}")
+        print()
+        print(Fore.RED + f"Error: {str(e)}")
+        print()
+
+# Load algorithm config from JSON and initialize detector globally
+algo_json_path = os.path.join(os.path.dirname(__file__), "json/nama_algoritma.json")
+with open(algo_json_path, "r", encoding="utf-8") as f:
+    algo_config = json.load(f)
+
+detector = GamblingAdDetector()
+detector.keywords = set(algo_config.get("keywords", []))
+detector.suspicious_tlds = set(algo_config.get("suspicious_tlds", []))
+detector.name_patterns = algo_config.get("name_patterns", [])
+detector.suspicious_chars = set(algo_config.get("suspicious_chars", []))
+detector.common_numbers = set(algo_config.get("common_numbers", []))
+detector.obfuscation_chars = algo_config.get("obfuscation_chars", {})
+detector._compile_patterns()
 
 if __name__ == "__main__":
     proses_file_csv("cleaned_comments.csv", "comments_labeled.csv")
