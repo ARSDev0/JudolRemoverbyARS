@@ -2,10 +2,6 @@
 
 **Judol Remover** is a Python tool for automatic moderation of spam comments on YouTube, featuring an advanced gambling ad detection algorithm and multi-platform support.
 
-**Version:** Alpha-1.5  
-**Author:** Awiones  
-**Repo:** [github.com/awiones](https://github.com/awiones)
-
 ---
 
 ## 🛠️ Requirements
@@ -26,7 +22,7 @@
 2. **Clone/Download this repo**
 
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/ARSDev0/JudolRemoverbyARS.git
    cd JudolRemoverbyARS
    ```
 
@@ -35,7 +31,10 @@
    ```bash
    python main.py
    ```
-   Choose the `Install Requirements` menu (option 4) on the main screen.
+   or
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ### On Android (Pydroid3)
 
@@ -45,7 +44,6 @@
    ```
    python main.py
    ```
-   Choose the `Install Requirements` menu.
 
 ---
 
@@ -57,10 +55,9 @@
    ```
 2. **Main menu:**
 
-   - `1` YouTube Authentication (enter Client ID, Client Secret, and API Key if available)
-   - `2` Delete credential files (reset authentication)
-   - `3` Run comment moderation (scraping, cleaning, labeling, moderation)
-   - `4` Install requirements (must be run the first time)
+   - `1` Konfigurasi Auth (enter Client ID, Client Secret, and API Key if available)
+   - `2` Scan Komentar Judol (scraping, cleaning, labeling, moderation)
+   - `3` Hapus File Kredensial (reset authentication)
    - `0` Exit
 
 3. **Workflow:**
